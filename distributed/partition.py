@@ -7,7 +7,7 @@ from typing import List, Optional, Union
 
 import torch
 
-import torch_geometric.distributed as pyg_dist
+import distributed as pyg_dist
 from torch_geometric.data import Data, HeteroData
 from torch_geometric.loader.cluster import ClusterData
 from torch_geometric.sampler.utils import sort_csc

@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from torch.distributed import rpc
 
-from torch_geometric.distributed.dist_context import DistContext, DistRole
+from distributed.dist_context import DistContext, DistRole
 
 try:
     from torch._C._distributed_rpc import _is_current_rpc_agent_set

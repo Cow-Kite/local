@@ -8,7 +8,7 @@ import torch.multiprocessing as mp
 
 from distributed import DistNeighborSampler
 from distributed.dist_context import DistContext
-from torch_geometric.distributed.rpc import (
+from distributed.rpc import (
     global_barrier,
     init_rpc,
     shutdown_rpc,

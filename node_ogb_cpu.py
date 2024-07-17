@@ -10,7 +10,7 @@ from torch.nn.parallel import DistributedDataParallel
 from tqdm import tqdm
 
 from torch_geometric.data import HeteroData
-from torch_geometric.distributed import (
+from distributed import (
     DistContext,
     DistNeighborLoader,
     LocalFeatureStore,
@@ -83,8 +83,14 @@ def test(
                 print(result)
 
     total_acc = total_correct / total_examples
-    print(f'[Node {dist_context.rank}] Test epoch {epoch} END: '
+    test_epoch = (f'[Node {dist_context.rank}] Test epoch {epoch} END: '
           f'acc={total_acc:.4f}, time={(time.time() - start_time):.2f}')
+    if logfile:
+        log = open(logfile, 'a+')
+        log.write(f'{test_epoch}\n')
+        log.close()
+
+    print(test_epoch)
     torch.distributed.barrier()
 
 
@@ -153,9 +159,15 @@ def train(
             if not progress_bar:
                 print(result)
 
-    print(f'[Node {dist_context.rank}] Train epoch {epoch} END: '
+    epoch_result = (f'[Node {dist_context.rank}] Train epoch {epoch} END: '
           f'loss={total_loss/total_examples:.4f}, '
           f'time={(time.time() - start_time):.2f}')
+    if logfile:
+        log = open(logfile, 'a+')
+        log.write(f'{epoch_result}\n')
+        log.close()
+    
+    print(epoch_result)
     torch.distributed.barrier()
 
 

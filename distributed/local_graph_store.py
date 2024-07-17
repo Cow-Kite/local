@@ -5,7 +5,7 @@ import torch
 from torch import Tensor
 
 from torch_geometric.data import EdgeAttr, GraphStore
-from torch_geometric.distributed.partition import load_partition_info
+from distributed.partition import load_partition_info
 from torch_geometric.typing import EdgeTensorType, EdgeType, NodeType
 from torch_geometric.utils import sort_edge_index
 

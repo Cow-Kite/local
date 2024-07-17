@@ -13,18 +13,18 @@ from distributed import (
     LocalFeatureStore,
     LocalGraphStore,
 )
-from torch_geometric.distributed.event_loop import (
+from distributed.event_loop import (
     ConcurrentEventLoop,
     to_asyncio_future,
 )
-from torch_geometric.distributed.rpc import (
+from distributed.rpc import (
     RPCCallBase,
     RPCRouter,
     rpc_async,
     rpc_partition_to_workers,
     rpc_register,
 )
-from torch_geometric.distributed.utils import (
+from distributed.utils import (
     BatchDict,
     DistEdgeHeteroSamplerInput,
     NodeDict,
@@ -890,6 +890,8 @@ class DistNeighborSampler:
         local_only = True
         single_partition = len(set(partition_ids.tolist())) == 1
 
+        count = 0
+
         for i in range(self.graph_store.num_partitions):
             p_id = (self.graph_store.partition_idx +
                     i) % self.graph_store.num_partitions
@@ -911,6 +913,7 @@ class DistNeighborSampler:
 
                 else:  # Sample on a remote machine:
                     local_only = False
+                    count += 1
                     to_worker = self.rpc_router.get_to_worker(p_id)
                     futs.append(
                         rpc_async(
@@ -933,7 +936,7 @@ class DistNeighborSampler:
         if single_partition:
             return self._get_sampler_output(p_outputs, len(srcs),
                                             partition_ids[0], src_batch)
-
+        print(f"Remote sampling was performed {count} times")
         return self._merge_sampler_outputs(partition_ids, partition_orders,
                                            p_outputs, one_hop_num, src_batch)
 
