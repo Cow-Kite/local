@@ -15,12 +15,27 @@ NUM_NODES=2 # 사용할 노드 수
 DATASET=ogbn-products # 사용할 데이터셋
 
 DATASET_ROOT_DIR="./data/partitions/${DATASET}/${NUM_NODES}-parts" # 데이터셋의 루트 디렉토리 설정
+# Number of epochs:
+NUM_EPOCHS=10
 
-IP_CONFIG=${PYG_WORKSPACE}/ip_config.yaml # IP 설정 파일의 경로를 설정
+# The batch size:
+BATCH_SIZE=1024
 
-# launch.py 스크립트를 실행하여 분산 작업을 시작
-python3 launch.py --workspace ${PYG_WORKSPACE} --ip_config ${IP_CONFIG} --ssh_username ${USER} --num_nodes ${NUM_NODES} --dataset_root_dir ${DATASET_ROOT_DIR} --dataset ${DATASET} "${CMD}" & pid=$!
+# Fanout per layer:
+NUM_NEIGHBORS="5,5,5"
 
+# Number of workers for sampling:
+NUM_WORKERS=2
+CONCURRENCY=4
+
+# DDP Port
+#DDP_PORT=11111
+
+# IP configuration path:
+IP_CONFIG=${PYG_WORKSPACE}/ip_config.yaml
+
+# stdout stored in `/logdir/logname.out`.
+python3 launch.py --workspace ${PYG_WORKSPACE} --ip_config ${IP_CONFIG} --ssh_username ${USER} --num_nodes ${NUM_NODES} --num_neighbors ${NUM_NEIGHBORS} --dataset_root_dir ${DATASET_ROOT_DIR} --dataset ${DATASET}  --num_epochs ${NUM_EPOCHS} --batch_size ${BATCH_SIZE} --num_workers ${NUM_WORKERS} --concurrency ${CONCURRENCY} "${CMD}" & pid=$!
 # 작업 시작 알림 및 신호 처리
 echo "started test_launch.py: ${pid}"
 trap "kill -2 $pid" SIGINT # SIGINT (Ctrl+C) 신호가 발생했을 때 실행 중인 프로세스를 종료하도록 설정

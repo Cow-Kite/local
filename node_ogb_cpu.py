@@ -80,7 +80,7 @@ def test(
                 log.close()
 
             if not progress_bar:
-                print(result)
+                print(result, flush=True)
 
     total_acc = total_correct / total_examples
     test_epoch = (f'[Node {dist_context.rank}] Test epoch {epoch} END: '
@@ -90,7 +90,7 @@ def test(
         log.write(f'{test_epoch}\n')
         log.close()
 
-    print(test_epoch)
+    print(test_epoch, flush=True)
     torch.distributed.barrier()
 
 
@@ -117,8 +117,11 @@ def train(
         target = batch['paper'].y[:batch_size]
         loss = F.cross_entropy(out, target)
         return loss, batch_size
-
+    
+    train_start = time.time()
     model.train()
+    print('[INFO]TRAIN TIME: ',time.time() - train_start, flush = True)
+    
     total_loss = total_examples = 0
 
     if loader.num_workers > 0:
@@ -132,17 +135,29 @@ def train(
 
         start_time = batch_time = time.time()
         for i, batch in enumerate(loader):
+            train_start = time.time()
             batch = batch.to(device)
+            print("[INFO]START BATCH", time.time() - train_start)
+            
+            train_start = time.time()
             optimizer.zero_grad()
-
+            print("[INFO]START ZERO_GRAD", time.time() - train_start)
+            
+            train_start = time.time()
             if isinstance(batch, HeteroData):
                 loss, batch_size = train_hetero(batch)
             else:
                 loss, batch_size = train_homo(batch)
-
+            print("[INFO]START LOSS", time.time() - train_start)
+            
+            train_start = time.time()
             loss.backward()
+            print("[INFO]START LOSS_BACKWARD", time.time() - train_start)
+            
+            train_start = time.time()
             optimizer.step()
-
+            print("[INFO]OPTIMIZER_STEP", time.time() - train_start)
+            
             total_loss += float(loss) * batch_size
             total_examples += batch_size
 
@@ -150,14 +165,14 @@ def train(
                       f'it={i}, loss={loss:.4f}, '
                       f'time={(time.time() - batch_time):.4f}')
             batch_time = time.time()
-
+            
             if logfile:
                 log = open(logfile, 'a+')
                 log.write(f'{result}\n')
                 log.close()
 
             if not progress_bar:
-                print(result)
+                print(result, flush=True)
 
     epoch_result = (f'[Node {dist_context.rank}] Train epoch {epoch} END: '
           f'loss={total_loss/total_examples:.4f}, '
@@ -167,7 +182,7 @@ def train(
         log.write(f'{epoch_result}\n')
         log.close()
     
-    print(epoch_result)
+    print(epoch_result, flush=True)
     torch.distributed.barrier()
 
 
@@ -217,6 +232,8 @@ def run_proc(
     graph = LocalGraphStore.from_partition(
         osp.join(root_dir, f'{dataset}-partitions'), node_rank)
     # Load partition into local feature store:
+    # 내가 고쳐야 할 부분
+    # LocalFeatureStore에 모든 파티션의 정보를 저장해야해
     feature = LocalFeatureStore.from_partition(
         osp.join(root_dir, f'{dataset}-partitions'), node_rank)
     feature.labels = torch.load(node_label_file)

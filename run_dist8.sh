@@ -10,11 +10,11 @@ EXEC_SCRIPT="${PYG_WORKSPACE}/node_ogb_cpu.py" # 실행할 Python 스크립트 �
 CMD="cd ${PYG_WORKSPACE}; ${PY_EXEC} ${EXEC_SCRIPT}" # 작업 디렉토리로 이동한 후, Python 스크립트를 실행
 
 # 분산 환경 설정
-NUM_NODES=4 # 사용할 노드 수
+NUM_NODES=8 # 사용할 노드 수
 
 DATASET=ogbn-products # 사용할 데이터셋
 
-DATASET_ROOT_DIR="./data_4/partitions/${DATASET}/${NUM_NODES}-parts" # 데이터셋의 루트 디렉토리 설정
+DATASET_ROOT_DIR="./data_8/partitions/${DATASET}/${NUM_NODES}-parts" # 데이터셋의 루트 디렉토리 설정
 # Number of epochs:
 NUM_EPOCHS=10
 
@@ -32,7 +32,7 @@ CONCURRENCY=4
 #DDP_PORT=11111
 
 # IP configuration path:
-IP_CONFIG=${PYG_WORKSPACE}/ip_config4.yaml
+IP_CONFIG=${PYG_WORKSPACE}/ip_config8.yaml
 
 # stdout stored in `/logdir/logname.out`.
 python3 launch.py --workspace ${PYG_WORKSPACE} --ip_config ${IP_CONFIG} --ssh_username ${USER} --num_nodes ${NUM_NODES} --num_neighbors ${NUM_NEIGHBORS} --dataset_root_dir ${DATASET_ROOT_DIR} --dataset ${DATASET}  --num_epochs ${NUM_EPOCHS} --batch_size ${BATCH_SIZE} --num_workers ${NUM_WORKERS} --concurrency ${CONCURRENCY} "${CMD}" & pid=$!
