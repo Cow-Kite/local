@@ -936,7 +936,6 @@ class DistNeighborSampler:
         if single_partition:
             return self._get_sampler_output(p_outputs, len(srcs),
                                             partition_ids[0], src_batch)
-        print(f"Remote sampling was performed {count} times")
         return self._merge_sampler_outputs(partition_ids, partition_orders,
                                            p_outputs, one_hop_num, src_batch)
 

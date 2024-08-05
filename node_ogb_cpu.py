@@ -18,7 +18,6 @@ from distributed import (
 )
 from torch_geometric.nn import GraphSAGE, to_hetero
 
-
 @torch.no_grad()
 def test(
     model,
@@ -85,6 +84,7 @@ def test(
     total_acc = total_correct / total_examples
     test_epoch = (f'[Node {dist_context.rank}] Test epoch {epoch} END: '
           f'acc={total_acc:.4f}, time={(time.time() - start_time):.2f}')
+
     if logfile:
         log = open(logfile, 'a+')
         log.write(f'{test_epoch}\n')
@@ -105,6 +105,8 @@ def train(
     num_loader_threads=10,
     progress_bar=True,
 ):
+    sync_time = 0
+
     def train_homo(batch):
         out = model(batch.x, batch.edge_index)[:batch.batch_size]
         loss = F.cross_entropy(out, batch.y[:batch.batch_size])
@@ -117,11 +119,8 @@ def train(
         target = batch['paper'].y[:batch_size]
         loss = F.cross_entropy(out, target)
         return loss, batch_size
-    
-    train_start = time.time()
+
     model.train()
-    print('[INFO]TRAIN TIME: ',time.time() - train_start, flush = True)
-    
     total_loss = total_examples = 0
 
     if loader.num_workers > 0:
@@ -135,37 +134,34 @@ def train(
 
         start_time = batch_time = time.time()
         for i, batch in enumerate(loader):
-            train_start = time.time()
             batch = batch.to(device)
-            print("[INFO]START BATCH", time.time() - train_start)
-            
-            train_start = time.time()
             optimizer.zero_grad()
-            print("[INFO]START ZERO_GRAD", time.time() - train_start)
-            
-            train_start = time.time()
+
+            batch_start = time.time()
             if isinstance(batch, HeteroData):
                 loss, batch_size = train_hetero(batch)
             else:
                 loss, batch_size = train_homo(batch)
-            print("[INFO]START LOSS", time.time() - train_start)
-            
-            train_start = time.time()
+            stop_batch = time.time() - batch_start
+            #print('[INFO] Batch_Train_Time: ', time.time() - batch_start, flush=True)
+
+            start_grad = time.time()
             loss.backward()
-            print("[INFO]START LOSS_BACKWARD", time.time() - train_start)
-            
-            train_start = time.time()
             optimizer.step()
-            print("[INFO]OPTIMIZER_STEP", time.time() - train_start)
-            
+            stop_grad = time.time() - start_grad
+            #print('[INFO] Grad_Time: ', stop_grad, flush=True)
+            sync_time += stop_grad
+
             total_loss += float(loss) * batch_size
             total_examples += batch_size
 
             result = (f'[Node {dist_context.rank}] Train: epoch={epoch}, '
                       f'it={i}, loss={loss:.4f}, '
-                      f'time={(time.time() - batch_time):.4f}')
+                      f'time={(time.time() - batch_time):.4f}, '
+                      f'batch_time={(stop_batch):.4f}, '
+                      f'grad_Time={(stop_grad):.4f} ')
             batch_time = time.time()
-            
+
             if logfile:
                 log = open(logfile, 'a+')
                 log.write(f'{result}\n')
@@ -176,7 +172,9 @@ def train(
 
     epoch_result = (f'[Node {dist_context.rank}] Train epoch {epoch} END: '
           f'loss={total_loss/total_examples:.4f}, '
-          f'time={(time.time() - start_time):.2f}')
+          f'time={(time.time() - start_time):.2f}, '
+          f'sync_time={(sync_time):.3f}')
+
     if logfile:
         log = open(logfile, 'a+')
         log.write(f'{epoch_result}\n')
@@ -184,6 +182,7 @@ def train(
     
     print(epoch_result, flush=True)
     torch.distributed.barrier()
+
 
 
 def run_proc(
@@ -232,8 +231,6 @@ def run_proc(
     graph = LocalGraphStore.from_partition(
         osp.join(root_dir, f'{dataset}-partitions'), node_rank)
     # Load partition into local feature store:
-    # 내가 고쳐야 할 부분
-    # LocalFeatureStore에 모든 파티션의 정보를 저장해야해
     feature = LocalFeatureStore.from_partition(
         osp.join(root_dir, f'{dataset}-partitions'), node_rank)
     feature.labels = torch.load(node_label_file)
@@ -252,7 +249,7 @@ def run_proc(
 
     print('--- Initialize DDP training group ...')
     torch.distributed.init_process_group(
-        backend='gloo',
+        backend='mpi',
         rank=current_ctx.rank,
         world_size=current_ctx.world_size,
         init_method=f'tcp://{master_addr}:{ddp_port}',
